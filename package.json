@@ -6,7 +6,7 @@
   "author": "Tim Howitz",
   "repository": {
     "type": "git",
-    "url": "ENTER GIT REPO URL"
+    "url": "https://github.com/thowitz/pmt-pdf-fullsize"
   },
   "scripts": {
     "start": "xt-build -e dev -w",
