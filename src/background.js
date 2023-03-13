@@ -1,30 +1,23 @@
 // todo switch to typescript
-const pmtPdfIframe = "https://www.physicsandmathstutor.com/pdf-pages/";
-const pmtPdf = "https://pmt.physicsandmathstutor.com/download/";
+const pmtPdfIframeRoot = "https://www.physicsandmathstutor.com/pdf-pages/";
+const pmtPdfRoot = "https://pmt.physicsandmathstutor.com/download/";
 
-function redirectToIframe(tabId) {
+function redirectToPdf(tab) {
   chrome.scripting.executeScript({
-    target: { tabId },
+    target: { tabId: tab.id },
     func: () => {
       location.replace(document.getElementById("pdf-content").children[0].src);
     },
   });
 }
 
-function goBack(tabId, iframePdfLocation) {
-  chrome.scripting.executeScript({
-    target: { tabId },
-    func: () => {
-      // todo figure out variables not working
-      window.alert(iframePdfLocation);
-      // location.replace(iframePdfLocation);
-    },
-  });
-}
+function goBackToIframe(tab) {
+  const iframePdfLocation = `${pmtPdfIframeRoot}?pdf=${encodeURIComponent(
+    tab.url
+  )}`;
 
-// chrome.runtime.onInstalled.addListener(() => {
-//   // todo get saved state
-// });
+  chrome.tabs.update(tab.id, { url: iframePdfLocation });
+}
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   chrome.action.setBadgeText({
@@ -32,10 +25,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   });
 
   // todo check current state
-  console.log("Tab", tab.url);
-  if (tab.pendingUrl !== true && tab.url.startsWith(pmtPdfIframe) === true) {
-    console.log("Redirect");
-    // redirectToIframe(tabId);
+  if (
+    tab.pendingUrl !== true &&
+    tab.url.startsWith(pmtPdfIframeRoot) === true
+  ) {
+    redirectToPdf(tabId);
   }
 });
 
@@ -53,14 +47,9 @@ chrome.action.onClicked.addListener(async (tab) => {
     text: nextState,
   });
 
-  if (nextState === "ON" && tab.url.startsWith(pmtPdfIframe) === true) {
-    redirectToIframe(tab.id);
-  } else if (nextState === "OFF" && tab.url.startsWith(pmtPdf) === true) {
-    // const iframePdfLocation = `${pmtPdfIframe}?pdf=${encodeURIComponent(
-    //   tab.url
-    // )}`;
-    const iframePdfLocation =
-      "https://www.physicsandmathstutor.com/pdf-pages/?pdf=https://pmt.physicsandmathstutor.com/download/Physics/A-level/Topic-Qs/AQA/07-Fields/Set-N/7.2.%20Gravitational%20Fields%20MS.pdf";
-    goBack(tab.id, iframePdfLocation);
+  if (nextState === "ON" && tab.url.startsWith(pmtPdfIframeRoot) === true) {
+    redirectToPdf(tab);
+  } else if (nextState === "OFF" && tab.url.startsWith(pmtPdfRoot) === true) {
+    goBackToIframe(tab);
   }
 });
