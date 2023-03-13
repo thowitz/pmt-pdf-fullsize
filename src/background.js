@@ -19,7 +19,7 @@ function goBackToIframe(tab) {
   chrome.tabs.update(tab.id, { url: iframePdfLocation });
 }
 
-function attemptNavigation(tab, nextState) {
+function attemptNavigation(nextState, tab) {
   if (nextState === "on" && tab.url.startsWith(pmtPdfIframeRoot) === true) {
     redirectToPdf(tab);
   } else if (nextState === "off" && tab.url.startsWith(pmtPdfRoot) === true) {
@@ -27,36 +27,62 @@ function attemptNavigation(tab, nextState) {
   }
 }
 
-function saveState(tab, newState) {
+function saveState(newState, tab) {
   chrome.action.setBadgeText({
-    tabId: tab.id,
-    text: newState,
+    tabId: tab ? tab.id : undefined,
+    text: newState.toUpperCase(),
   });
 
+  console.log("New state set", newState);
   chrome.storage.sync.set({ extensionEnabledState: newState });
 }
 
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.storage.sync.get("extensionEnabledState").then((result) => {
+    const currentState = result.extensionEnabledState;
+    if (!currentState) {
+      saveState("on");
+    } else {
+      saveState(currentState);
+    }
+  });
+});
+
 // set badge text in new active tab
-chrome.tabs.onActivated.addListener((tabId) => {
-  chrome.storage.sync.get(["extensionEnabledState"]).then((currentState) =>
+// todo fix
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  chrome.storage.sync.get("extensionEnabledState").then((result) => {
+    let badgeText = "";
+    badgeText ||= result.extensionEnabledState.toUpperCase();
+
+    console.log("Called on activated");
     chrome.action.setBadgeText({
-      tabId,
-      text: currentState.toUpperCase(),
-    })
-  );
+      tabId: activeInfo.tabId,
+      text: badgeText,
+    });
+  });
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  chrome.storage.sync
-    .get(["extensionEnabledState"])
-    .then((currentState) => attemptNavigation(tab, currentState));
+  chrome.storage.sync.get("extensionEnabledState").then((result) => {
+    const currentState = result.extensionEnabledState;
+
+    attemptNavigation(currentState, tab);
+    chrome.action.setBadgeText({
+      tabId: tab ? tab.id : undefined,
+      text: currentState.toUpperCase(),
+    });
+  });
 });
 
 chrome.action.onClicked.addListener(async (tab) => {
-  const prevState = await chrome.storage.sync.get(["extensionEnabledState"]);
-  // the button only toggles
-  const nextState = prevState === "on" ? "off" : "on";
+  const result = await chrome.storage.sync.get("extensionEnabledState");
+  const prevState = result.extensionEnabledState;
 
-  attemptNavigation(tab, nextState);
-  saveState(tab, nextState);
+  // the button only toggles
+  const nextState =
+    prevState === "on" ? "off" : prevState === "off" ? "on" : "";
+
+  attemptNavigation(nextState, tab);
+  saveState(nextState, tab);
 });

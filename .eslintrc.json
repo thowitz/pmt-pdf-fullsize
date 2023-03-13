@@ -4,9 +4,7 @@
     "es2021": true,
     "node": true
   },
-  "extends": [
-    "eslint:recommended"
-  ],
+  "extends": ["eslint:recommended"],
   "globals": {
     "document": false,
     "escape": false,
@@ -22,9 +20,8 @@
   },
   "plugins": [],
   "parserOptions": {
-    "ecmaVersion": 2020,
+    "ecmaVersion": 2021,
     "sourceType": "module"
   },
-  "rules": {
-  }
+  "rules": {}
 }
