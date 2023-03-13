@@ -19,37 +19,44 @@ function goBackToIframe(tab) {
   chrome.tabs.update(tab.id, { url: iframePdfLocation });
 }
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  chrome.action.setBadgeText({
-    text: "ON",
-  });
-
-  // todo check current state
-  if (
-    tab.pendingUrl !== true &&
-    tab.url.startsWith(pmtPdfIframeRoot) === true
-  ) {
-    redirectToPdf(tabId);
-  }
-});
-
-// thanks chrome extension docs
-chrome.action.onClicked.addListener(async (tab) => {
-  // Retrieve the action badge to check if the extension is 'ON' or 'OFF'
-  const prevState = await chrome.action.getBadgeText({ tabId: tab.id });
-
-  // Next state will always be the opposite
-  const nextState = prevState === "ON" ? "OFF" : "ON";
-
-  // Set the action badge to the next state
-  await chrome.action.setBadgeText({
-    tabId: tab.id,
-    text: nextState,
-  });
-
-  if (nextState === "ON" && tab.url.startsWith(pmtPdfIframeRoot) === true) {
+function attemptNavigation(tab, nextState) {
+  if (nextState === "on" && tab.url.startsWith(pmtPdfIframeRoot) === true) {
     redirectToPdf(tab);
-  } else if (nextState === "OFF" && tab.url.startsWith(pmtPdfRoot) === true) {
+  } else if (nextState === "off" && tab.url.startsWith(pmtPdfRoot) === true) {
     goBackToIframe(tab);
   }
+}
+
+function saveState(tab, newState) {
+  chrome.action.setBadgeText({
+    tabId: tab.id,
+    text: newState,
+  });
+
+  chrome.storage.sync.set({ extensionEnabledState: newState });
+}
+
+// set badge text in new active tab
+chrome.tabs.onActivated.addListener((tabId) => {
+  chrome.storage.sync.get(["extensionEnabledState"]).then((currentState) =>
+    chrome.action.setBadgeText({
+      tabId,
+      text: currentState.toUpperCase(),
+    })
+  );
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  chrome.storage.sync
+    .get(["extensionEnabledState"])
+    .then((currentState) => attemptNavigation(tab, currentState));
+});
+
+chrome.action.onClicked.addListener(async (tab) => {
+  const prevState = await chrome.storage.sync.get(["extensionEnabledState"]);
+  // the button only toggles
+  const nextState = prevState === "on" ? "off" : "on";
+
+  attemptNavigation(tab, nextState);
+  saveState(tab, nextState);
 });
