@@ -6,7 +6,9 @@ function redirectToPdf(tab) {
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: () => {
-      location.replace(document.getElementById("pdf-content").children[0].src);
+      location.replace(
+        document.getElementById("pdf-content").children[0].src + "#zoom=125"
+      );
     },
   });
 }
