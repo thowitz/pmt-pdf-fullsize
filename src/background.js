@@ -1,10 +1,9 @@
-// todo switch to typescript
 const pmtPdfIframeRoot = "https://www.physicsandmathstutor.com/pdf-pages/";
 const pmtPdfRoot = "https://pmt.physicsandmathstutor.com/download/";
 
-function redirectToPdf(tab) {
+function redirectToPdf(tabId) {
   chrome.scripting.executeScript({
-    target: { tabId: tab.id },
+    target: { tabId: tabId },
     func: () => {
       location.replace(
         document.getElementById("pdf-content").children[0].src + "#zoom=125"
@@ -13,31 +12,50 @@ function redirectToPdf(tab) {
   });
 }
 
-function goBackToIframe(tab) {
+function goBackToIframe(currentUrl, tabId) {
+  // remove zoom text from end of url
+  const plainPdfUrl = currentUrl.slice(0, currentUrl.indexOf("#zoom="));
+
   const iframePdfLocation = `${pmtPdfIframeRoot}?pdf=${encodeURIComponent(
-    tab.url
+    plainPdfUrl
   )}`;
 
-  chrome.tabs.update(tab.id, { url: iframePdfLocation });
+  chrome.tabs.update(tabId, { url: iframePdfLocation });
 }
 
-function attemptNavigation(nextState, tab) {
+function attemptNavigation(nextState, currentUrl, tabId) {
   console.log("Attempt navigation called");
-  if (nextState === "on" && tab.url.startsWith(pmtPdfIframeRoot) === true) {
-    redirectToPdf(tab);
-  } else if (nextState === "off" && tab.url.startsWith(pmtPdfRoot) === true) {
-    goBackToIframe(tab);
+  if (nextState === "on" && currentUrl.startsWith(pmtPdfIframeRoot) === true) {
+    redirectToPdf(tabId);
+  } else if (
+    nextState === "off" &&
+    currentUrl.startsWith(pmtPdfRoot) === true
+  ) {
+    goBackToIframe(currentUrl, tabId);
   }
 }
 
-function saveState(newState, tab) {
+function saveState(newState, tabId) {
   console.log("Save state called");
   chrome.action.setBadgeText({
-    tabId: tab ? tab.id : undefined,
+    tabId,
     text: newState.toUpperCase(),
   });
 
   chrome.storage.sync.set({ extensionEnabledState: newState });
+}
+
+function updateTabToCurrentState(currentUrl, tabId) {
+  chrome.storage.sync.get("extensionEnabledState").then((result) => {
+    console.log("Current state", result);
+    const currentState = result.extensionEnabledState;
+
+    attemptNavigation(currentState, currentUrl, tabId);
+    chrome.action.setBadgeText({
+      tabId,
+      text: currentState.toUpperCase(),
+    });
+  });
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -54,44 +72,26 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.windows.onFocusChanged.addListener(() => {
   console.log("On focus changed");
-  chrome.storage.sync.get("extensionEnabledState").then((result) => {
-    let badgeText = "";
-    badgeText ||= result.extensionEnabledState.toUpperCase();
 
-    console.log("On focus changed result", result);
-    chrome.action.setBadgeText({
-      text: badgeText,
-    });
-  });
+  chrome.tabs.getCurrent({ active: true }, (tabs) =>
+    tabs.forEach((tab) => updateTabToCurrentState(tab.url, tab.id))
+  );
 });
 
 // set badge text in new active tab
 // todo fix
 chrome.tabs.onActivated.addListener((activeInfo) => {
   console.log("On activated");
-  chrome.storage.sync.get("extensionEnabledState").then((result) => {
-    let badgeText = "";
-    badgeText ||= result.extensionEnabledState.toUpperCase();
 
-    console.log("On activated result", result);
-    chrome.action.setBadgeText({
-      tabId: activeInfo.tabId,
-      text: badgeText,
-    });
-  });
+  chrome.tabs.get(activeInfo.tabId, (tab) =>
+    updateTabToCurrentState(tab.url, activeInfo.tabId)
+  );
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   console.log("On updated");
-  chrome.storage.sync.get("extensionEnabledState").then((result) => {
-    const currentState = result.extensionEnabledState;
 
-    attemptNavigation(currentState, tab);
-    chrome.action.setBadgeText({
-      tabId: tab ? tab.id : undefined,
-      text: currentState.toUpperCase(),
-    });
-  });
+  updateTabToCurrentState(changeInfo.url, tabId);
 });
 
 chrome.action.onClicked.addListener(async (tab) => {
@@ -100,9 +100,15 @@ chrome.action.onClicked.addListener(async (tab) => {
   const prevState = result.extensionEnabledState;
 
   // the button only toggles
-  const nextState =
-    prevState === "on" ? "off" : prevState === "off" ? "on" : "";
+  let nextState;
+  if (prevState === "on") {
+    nextState = "off";
+  } else if (prevState === "off") {
+    nextState = "on";
+  }
 
-  attemptNavigation(nextState, tab);
-  saveState(nextState, tab);
+  if (nextState) {
+    attemptNavigation(nextState, tab);
+    saveState(nextState, tab);
+  }
 });
