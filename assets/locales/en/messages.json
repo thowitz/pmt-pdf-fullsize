@@ -1,11 +1,11 @@
 {
-    "appName": {
-        "message": "pmt-pdf-fullsize"
-    },
-    "appShortName": {
-        "message": "pmt-pdf-fullsize"
-    },
-    "appDescription": {
-        "message": "Automatically resizes physics and maths tutor pdfs to take up all of the empty space"
-    }
+  "appName": {
+    "message": "pmt-pdf-fullsize"
+  },
+  "appShortName": {
+    "message": "pmt-pdf-fullsize"
+  },
+  "appDescription": {
+    "message": "Automatically resizes and zooms physics and maths tutor pdfs"
+  }
 }

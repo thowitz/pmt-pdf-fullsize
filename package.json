@@ -1,6 +1,6 @@
 {
   "name": "pmt-pdf-fullsize",
-  "description": "Automatically resizes physics and maths tutor pdfs to take up all of the empty space",
+  "description": "Automatically resizes and zooms physics and maths tutor pdfs",
   "version": "0.0.1",
   "homepage": "http://chrome.google.com/webstore",
   "author": "Tim Howitz",
