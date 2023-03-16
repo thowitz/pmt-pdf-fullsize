@@ -71,7 +71,6 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
-// todo only update tabs in focused window
 chrome.windows.onFocusChanged.addListener(() => {
   chrome.tabs.query({ active: true }, (tabs) =>
     tabs.forEach((tab) => {
