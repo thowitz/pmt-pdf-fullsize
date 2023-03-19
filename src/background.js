@@ -5,9 +5,10 @@ function redirectToPdf(tabId) {
   chrome.scripting.executeScript({
     target: { tabId: tabId },
     func: () => {
-      location.replace(
-        document.getElementById("pdf-content").children[0].src + "#zoom=125"
-      );
+      let iframeUrl = document.getElementById("pdf-content").children[0].src;
+      // remove occasional case of double slash
+      iframeUrl = iframeUrl.replace(/(?<!https?:)\/\//g, "/");
+      location.replace(iframeUrl + "#zoom=125");
     },
   });
 }
